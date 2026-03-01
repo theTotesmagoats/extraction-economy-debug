@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>EXTRACTION ECONOMY v11.3 - Universal Cockpit (Fixed)</title>
+<style>
+    :root {
+        --win-bg: #c0c0c0; --win-high: #ffffff; --win-shadow: #808080;
+        --win-deep: #000000; --win-blue: linear-gradient(90deg, #000080, #1084d0);
+    }
+    
+    /* VIEWPORT LOCK: Prevents entire page from scrolling */
+    html, body { height: 100vh; overflow: hidden; margin: 0; padding: 0; background-color: #008080; font-family: 'Tahoma', sans-serif; font-size: 13px; }
+    
+    .master-app { display: flex; flex-direction: column; height: 100%; max-width: 1450px; margin: 0 auto; padding: 8px; box-sizing: border-box; }
+    
+    /* Win95 Custom Scrollbars */
+    ::-webkit-scrollbar { width: 14px; }
+    ::-webkit-scrollbar-track { background: #dfdfdf; border-left: 1px solid var(--win-shadow); box-shadow: inset 1px 1px 0px #000; }
+    ::-webkit-scrollbar-thumb { background: var(--win-bg); border: 1px solid var(--win-high); border-right-color: var(--win-deep); border-bottom-color: var(--win-deep); }
+    ::-webkit-scrollbar-thumb:active { background: #a0a0a0; }
+
+    .window { background: var(--win-bg); box-shadow: inset 1px 1px var(--win-high), inset -1px -1px var(--win-shadow), 1px 1px 0px 1px var(--win-deep); padding: 3px; display: flex; flex-direction: column; }
+    .title-bar { background: var(--win-blue); height: 20px; padding: 2px 6px; display: flex; justify-content: space-between; align-items: center; color: white; font-weight: bold; font-size: 12px; letter-spacing: 0.5px; flex-shrink: 0; }
+    .content-area { padding: 6px; flex-grow: 1; }
+    .inset-panel { box-shadow: inset 1px 1px var(--win-shadow), inset -1px -1px var(--win-high); padding: 8px; background: #dfdfdf; }
+    
+    .protocol-wrap { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dotted #888; padding: 8px 4px; transition: background 0.2s; }
+    .protocol-label { flex-grow: 1; cursor: pointer; line-height: 1.3; display: flex; align-items: center; gap: 8px; font-size: 13px; }
+    .protocol-label input[type="checkbox"] { width: 18px; height: 18px; cursor: pointer; margin: 0; }
+    
+    .protocol-wrap.locked { color: #888; }
+    .protocol-wrap.locked input { cursor: not-allowed; }
+    .protocol-wrap.locked:active { background: #d0d0d0; border-bottom: 1px dotted #ff0000; }
+    .ethical-label { color: #006400; }
+    
+    .info-btn { background: #dfdfdf; border: 1px solid #444; padding: 6px 12px; cursor: pointer; font-weight: bold; font-family: 'Courier New', monospace; font-size: 13px; border-radius: 2px; margin-left: 8px; box-shadow: 1px 1px 0px #000; }
+    .info-btn:active { background: #c0c0c0; box-shadow: inset 1px 1px 0px #000; transform: translate(1px, 1px); }
+
+    .led-container { height: 18px; background: #000; border: 1px solid var(--win-shadow); position: relative; overflow: hidden; margin-bottom: 4px; }
+    .led-fill { height: 100%; transition: width 0.4s ease; }
+    .metric-row { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 2px; align-items: center; font-weight: bold; }
+    
+    button { background: var(--win-bg); border: 1px solid var(--win-deep); box-shadow: inset 1px 1px var(--win-high), inset -1px -1px var(--win-shadow); padding: 8px; cursor: pointer; font-size: 12px; width: 100%; font-weight: bold; }
+    button:active { box-shadow: inset -1px -1px var(--win-high), inset 1px 1px var(--win-shadow); }
+    button:disabled { color: #777; cursor: not-allowed; font-weight: normal; }
+
+    canvas { background: #000; width: 100%; height: 90px; image-rendering: pixelated; border: 1px solid var(--win-shadow); }
+    #event_log { height: 90px; overflow-y: scroll; background: #fff; font-family: 'Courier New', monospace; font-size: 12px; padding: 4px; border: 1px solid var(--win-shadow); line-height: 1.3; }
+    
+    .scorecard { font-weight: bold; color: #000080; font-size: 13px; line-height: 1.6; }
+    .scorecard-target { color: #8b0000; font-family: 'Courier New', monospace; font-size: 14px; background: #d0d0d0; padding: 2px; border: 1px dotted #888; display: inline-block; margin-top: 4px; width: 100%; text-align: center; }
+    
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 4px 2px; text-align: left; border-bottom: 1px solid #ccc; }
+    
+    .status-running { background: #008000; color: white; padding: 2px 6px; border-radius: 2px; animation: blinker 1s linear infinite; }
+    .status-halted { background: #800000; color: white; padding: 2px 6px; border-radius: 2px; }
+    @keyframes blinker { 50% { opacity: 0; } }
+    
+    /* Top Header Consolidation */
+    .header-dashboard { display: flex; gap: 8px; margin-bottom: 8px; flex-shrink: 0; height: 60px; }
+    .cander-logo { background: #000; padding: 0 15px; display: flex; flex-direction: column; justify-content: center; align-items: center; border: 2px solid var(--win-shadow); box-shadow: inset 2px 2px #000, inset -2px -2px #444; flex: 1; }
+    .cander-logo-main { color: #00ff00; font-family: 'Courier New', monospace; font-size: 28px; font-weight: bold; letter-spacing: 8px; text-shadow: 0px 0px 4px #00ff00; margin: 0; }
+    .cander-logo-sub { color: #888; font-family: 'Tahoma', sans-serif; font-size: 10px; letter-spacing: 8px; margin-top: 2px; margin-left: 8px; }
+    
+    .threat-banner { color: white; padding: 6px; font-weight: bold; text-align: center; margin-bottom: 8px; border: 1px solid #000; display: none; font-family: 'Courier New', monospace; letter-spacing: 1px; font-size: 13px; flex-shrink: 0; }
+    .threat-board { background: #8b0000; animation: blinker 2s linear infinite; }
+    .threat-state { background: #cc5500; }
+    .threat-positive { background: #006400; animation: none; }
+    
+    .inbox-item { border-bottom: 1px solid #ccc; padding: 10px; cursor: pointer; font-size: 13px; line-height: 1.3; }
+    .inbox-item:hover { background: #e0e0e0; }
+    .unread { font-weight: bold; color: #000080; }
+    
+    .action-button { margin-top: 8px; height: 40px; background: #dfdfdf; border: 2px solid #444; font-weight: bold; cursor: pointer; font-size: 13px; }
+    
+    .ticker-wrap { width: 100%; overflow: hidden; background-color: #000; border: 1px solid var(--win-shadow); box-shadow: inset 1px 1px #000; margin-bottom: 8px; white-space: nowrap; box-sizing: border-box; flex-shrink: 0; }
+    .ticker { display: inline-block; padding-left: 100%; transform: translateX(0); animation: ticker 25s linear infinite; color: #00ff00; font-family: 'Courier New', monospace; font-size: 13px; padding-top: 4px; padding-bottom: 4px; font-weight: bold; }
+    @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+    
+    .leaderboard-row { display: flex; justify-content: space-between; border-bottom: 1px dotted #888; padding: 4px 0; font-size: 12px; }
+    .leaderboard-row:last-child { border-bottom: none; }
+    
+    .ctrl-btn { height: 100%; font-size: 13px; background: #dfdfdf; flex-grow: 1; margin: 0; }
+    .ctrl-active { background: #008080; color: white; box-shadow: inset -1px -1px var(--win-high), inset 1px 1px var(--win-shadow); }
+
+    /* INDEPENDENT COLUMN SCROLLING */
+    .grid-container { display: grid; grid-template-columns: 280px 1fr 340px; gap: 8px; flex-grow: 1; overflow: hidden; min-height: 0; }
+    .col-left, .col-right { overflow-y: auto; overflow-x: hidden; padding-right: 4px; display: flex; flex-direction: column; gap: 8px; }
+    .col-mid { overflow-y: auto; overflow-x: hidden; padding-right: 4px; display: flex; flex-direction: column; gap: 8px; }
+    
+    .sticky-intel { position: sticky; top: 0; z-index: 10; margin-bottom: 8px; }
+
+    @media (max-width: 950px) {
+        html, body { height: auto; overflow: auto; }
+        .master-app { height: auto; }
+        .grid-container { grid-template-columns: 1fr; overflow: visible; height: auto; display: flex; flex-direction: column; }
+        .header-dashboard { flex-direction: column; height: auto; }
+        .col-left, .col-mid, .col-right { overflow-y: visible; padding-right: 0; }
+        .cander-logo { padding: 15px; }
+        .sticky-intel { position: relative; }
+        .inbox-modal-content { flex-direction: column !important; }
+        .inbox-list-area { width: 100% !important; height: 150px; border-right: none !important; border-bottom: 2px solid var(--win-shadow); }
+    }
+</style>
+</head>
+<body>
+
+<div class="master-app">
+    <div class="header-dashboard">
+        <div class="cander-logo">
+            <div class="cander-logo-main">CANDER</div>
+            <div class="cander-logo-sub">OPERATIONAL TERMINAL v11.3 (FIXED)</div>
+        </div>
+        
+        <div class="window" style="margin: 0; width: 200px; justify-content: center;">
+            <div class="content-area" style="display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 11px; font-weight: bold; color: #555; text-align: center;">RESERVES</div>
+                <div id="p_disp" style="font-size:24px; font-weight:bold; color:green; text-align: center;">$500,000</div>
+            </div>
+        </div>
+        
+        <div class="window" style="margin: 0; width: 120px; justify-content: center;">
+            <div class="content-area" style="display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 11px; font-weight: bold; color: #555; text-align: center;">MACRO GDP</div>
+                <div id="g_disp" style="font-size:20px; font-weight:bold; color:#3366cc; text-align: center;">100%</div>
+            </div>
+        </div>
+        
+        <div class="window" style="margin: 0; width: 340px;">
+            <div class="title-bar" style="height: 14px; font-size: 10px;">PACING <span id="clock_status" class="status-halted" style="font-size: 9px; padding: 1px 4px;">HALTED</span></div>
+            <div class="content-area" style="display: flex; gap: 4px; padding: 4px;">
+                <button class="ctrl-btn ctrl-active" id="btn_p_pause" onclick="set_speed(0)">|| PAUSE</button>
+                <button class="ctrl-btn" id="btn_p_1x" onclick="set_speed(2500)">> 1X</button>
+                <button class="ctrl-btn" id="btn_p_2x" onclick="set_speed(1250)">>> 2X</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ticker-wrap"><div class="ticker" id="news_ticker">MARKET STABLE... AWAITING MONTHLY EARNINGS REPORT... INITIALIZING CANDER TERMINAL...</div></div>
+    
+    <div id="alert_board" class="threat-banner threat-board">⚠️ FIDUCIARY RISK: Board patience critical. Missed growth targets. Increase extraction yield immediately.</div>
+    <div id="alert_state" class="threat-banner threat-state">⚠️ ANTITRUST RISK: Political capital depleted. State intervention imminent.</div>
+    <div id="alert_boom" class="threat-banner threat-positive">📈 VALUE CREATION: Free Market Expansion triggered. Total Addressable Market (TAM) growing.</div>
+
+    <div class="grid-container">
+        
+        <div class="col-left">
+            <div class="window" style="margin-bottom:0;"><div class="title-bar">GLOBAL_USER_BASE</div><div class="content-area">
+                <div id="u_disp" style="font-size:22px; font-weight:bold;">10,000</div>
+                <div style="font-size:11px; color:#555;">Total Active Licenses</div>
+            </div></div>
+            
+            <div class="window" style="background:#d4d0c8; margin-bottom:0;">
+                <div class="title-bar" style="background:#404040;">SCORECARD</div>
+                <div class="content-area scorecard">
+                    Extracted: $<span id="s_ext">0</span><br>
+                    Lobbying/PR: $<span id="s_lob">0</span><br>
+                    Engineers: <span id="s_eng">150</span><br>
+                    <div class="scorecard-target">TARGET MARGIN:<br>$<span id="s_target">30,000</span></div>
+                    <br>Current Month: <span id="q_disp">1</span>
+                </div>
+            </div>
+
+            <div class="window" style="margin-bottom:0;">
+                <div class="title-bar" style="background: #404040;">MARKET_SEGMENTS</div>
+                <div class="content-area inset-panel" style="max-height: 120px; overflow-y: auto;">
+                    <table><thead><tr><th>SEGMENT</th><th>VOL</th><th>SAT</th><th>DEP</th></tr></thead><tbody id="user_table"></tbody></table>
+                </div>
+            </div>
+
+            <div class="window" style="flex-grow: 1; margin-bottom:0;">
+                <div class="title-bar" style="background:#000;">ALL-TIME TOP EXTRACTIONS</div>
+                <div class="content-area inset-panel" id="high_scores_list" style="font-family:'Courier New', monospace; font-size:12px; color:#000080; overflow-y: auto;">
+                    No historical data.
+                </div>
+            </div>
+        </div>
+
+        <div class="col-mid">
+            <div class="window sticky-intel" style="background: #ffffe1; border: 2px solid #800000; margin-bottom: 0;">
+                <div class="title-bar" style="background:#800000;">TACTICAL_INTEL</div>
+                <div class="content-area" id="intel_display" style="font-family: 'Courier New', monospace; font-size: 13px; font-weight: bold; min-height: 40px; color: #000; padding: 8px; line-height: 1.4;">
+                    Tap [?] on any protocol to review historical precedent and systemic impact without activating the protocol.
+                </div>
+            </div>
+
+            <div class="window" style="margin-bottom:0;">
+                <div class="title-bar" style="background:#2e8b57;">PRO-CONSUMER PROTOCOLS (ETHICAL RISK)</div>
+                <div class="content-area inset-panel" style="padding: 4px;">
+                    <div class="protocol-wrap" id="wrap_e_uni">
+                        <label class="protocol-label ethical-label"><input type="checkbox" id="e_uni" onchange="update_locks()"> Universal Interoperability</label>
+                        <div class="info-btn" onclick="show_intel('FREE MARKET: Eliminates lock-in by maintaining open file formats. This is the base requirement for Market Expansion, but reduces your Dependency to 0%.')">[?]</div>
+                    </div>
+                    <div class="protocol-wrap" id="wrap_e_priv">
+                        <label class="protocol-label ethical-label"><input type="checkbox" id="e_priv" onchange="update_locks()"> Privacy Sandbox</label>
+                        <div class="info-btn" onclick="show_intel('FREE MARKET: End-to-end encryption. Destroys your ability to sell data. Costs $16k/mo in server overhead, but boosts engineer morale and user trust.')">[?]</div>
+                    </div>
+                    <div class="protocol-wrap" id="wrap_e_trans">
+                        <label class="protocol-label ethical-label"><input type="checkbox" id="e_trans" onchange="update_locks()"> Transparent Billing</label>
+                        <div class="info-btn" onclick="show_intel('FREE MARKET: Flat rate only. No hidden fees. Drops ARPU (Average Revenue Per User) significantly, but is required to trigger Market Expansion.')">[?]</div>
+                    </div>
+                    <div class="protocol-wrap" id="wrap_i_rd">
+                        <label class="protocol-label ethical-label"><input type="checkbox" id="i_rd" onchange="update_locks()"> Traditional R&D (-$30k/m)</label>
+                        <div class="info-btn" onclick="show_intel('FREE MARKET: Innovation generates organic dependency. However, sustained investment yields diminishing returns. Watch your R&D Yield gauge.')">[?]</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="window" style="margin-bottom:0;">
+                <div class="title-bar" style="background:#4a90e2;">INFRASTRUCTURE LOCK-IN (THE CAGE)</div>
+                <div class="content-area inset-panel" style="padding: 4px;">
+                    <div class="protocol-wrap" id="wrap_i_cld">
+                        <label class="protocol-label"><input type="checkbox" id="i_cld" onchange="update_locks()"> Cloud Loss-Leader (-$50k/m)</label>
+                        <div class="info-btn" onclick="show_intel('HISTORICAL: The Goliath playbook. Burn $50k/mo of VC capital to heavily subsidize cloud storage. It drives massive adoption and starves local competitors of oxygen.')">[?]</div>
+                    </div>
+                    <div class="protocol-wrap" id="wrap_i_fmt">
+                        <label class="protocol-label"><input type="checkbox" id="i_fmt" disabled onchange="update_locks()"> Deprecate Standard Exports</label>
+                        <div class="info-btn" onclick="show_intel('HISTORICAL: The FruitTech/Axiom trap. Force users to save work in proprietary formats. If they ever leave your ecosystem, their years of historical files become instantly unreadable.')">[?]</div>
+                    </div>
+                    <div class="protocol-wrap" id="wrap_i_sas">
+                        <label class="protocol-label"><input type="checkbox" id="i_sas" disabled onchange="update_locks()"> SaaS Transition</label>
+                        <div class="info-btn" onclick="show_intel('HISTORICAL: Axiom Design 2013 shift. Revoke previously sold perpetual licenses and force users into a monthly subscription toll booth. Triggers massive outrage, but locks in recurring revenue.')">[?]</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="window" style="margin-bottom:0;"><div class="title-bar">EXTRACTION_PROTOCOLS (THE HARVEST)</div>
+            <div class="content-area inset-panel" style="padding: 4px;">
+                <div class="metric-row" style="margin: 6px 10px; padding-bottom: 12px; border-bottom: 2px solid #888;">
+                    <span style="font-size:13px;">MONTHLY SUB: $<span id="price_val">10</span></span>
+                    <input type="range" id="price_slider" min="0" max="150" value="10" oninput="document.getElementById('price_val').innerText=this.value; update_locks();" style="width: 140px; height: 20px;">
+                </div>
+                
+                <div class="protocol-wrap" id="wrap_t_pd">
+                    <label class="protocol-label"><input type="checkbox" id="t_pd" onchange="update_locks()"> Algorithmic Price Discrim.</label>
+                    <div class="info-btn" onclick="show_intel('HISTORICAL: Velocity Surge pricing. Automatically detect user desperation (tight deadlines, battery dying) and charge maximum dynamic tolls. (+$5/user/mo)')">[?]</div>
+                </div>
+                <div class="protocol-wrap" id="wrap_t_st">
+                    <label class="protocol-label"><input type="checkbox" id="t_st" onchange="update_locks()"> Cancellation Friction</label>
+                    <div class="info-btn" onclick="show_intel('HISTORICAL: Goliath Prime. Intentionally design confusing UI mazes (Roach Motels) to legally trick users out of canceling. (+$3/user/mo)')">[?]</div>
+                </div>
+                <div class="protocol-wrap" id="wrap_t_hf">
+                    <label class="protocol-label"><input type="checkbox" id="t_hf" onchange="update_locks()"> Drip Pricing / Hidden Fees</label>
+                    <div class="info-btn" onclick="show_intel('HISTORICAL: GateKeeper Ticketing. Advertise a low base price, but hide compute/rendering costs until the final stage of checkout. (+$2/user/mo)')">[?]</div>
+                </div>
+                <div class="protocol-wrap" id="wrap_t_db">
+                    <label class="protocol-label"><input type="checkbox" id="t_db" onchange="update_locks()"> Telemetry Brokering</label>
+                    <div class="info-btn" onclick="show_intel('HISTORICAL: Panopticon Media. Secretly harvest users behavior and sell the dataset to third-party ad networks. Highly lucrative, severe political risk. (+$6/user/mo)')">[?]</div>
+                </div>
+            </div></div>
+            
+            <div class="window" style="margin-bottom:0;">
+                <div class="title-bar">LOBBYING, PR & HR</div>
+                <div class="content-area inset-panel" style="padding: 4px;">
+                    <div class="protocol-wrap" id="wrap_inf_moat">
+                        <label class="protocol-label"><input type="checkbox" id="inf_moat" onchange="update_locks()"> Regulatory Moat (-$65k/m)</label>
+                        <div class="info-btn" onclick="show_intel('HISTORICAL: Big Tech lobbying for AI safety regulations. Fund PACs that push for laws specifically designed to make compliance too expensive for open-source startups.')">[?]</div>
+                    </div>
+                    <div class="protocol-wrap" id="wrap_inf_pr">
+                        <label class="protocol-label"><input type="checkbox" id="inf_pr" onchange="update_locks()"> PR Spin Campaign (-$15k/m)</label>
+                        <div class="info-btn" onclick="show_intel('HISTORICAL: Oceanic Petroleum carbon footprint spin. Spend money on media firms to artificially reframe your predatory behavior as pro-consumer innovation.')">[?]</div>
+                    </div>
+                    <div class="protocol-wrap" id="wrap_hr_nca">
+                        <label class="protocol-label"><input type="checkbox" id="hr_nca" onchange="update_locks()"> Enforce Non-Competes</label>
+                        <div class="info-btn" onclick="show_intel('REALITY: The invisible trap. Legally prevents your engineers from quitting to build competitors. However, trapped engineers slowly poison your internal culture, guaranteeing a steady morale drain.')">[?]</div>
+                    </div>
+                    
+                    <div style="padding: 8px;">
+                        <button onclick="acquire_competitor()" id="btn_acquire" style="height: 40px; font-size: 14px;">ACQUIRE THREAT ($0)</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-right">
+            <div class="window" style="margin-bottom:0;"><div class="title-bar" style="background:#b22222;">SYSTEM_VARIABLES</div><div class="content-area">
+                
+                <div class="metric-row"><span>R&D Yield (Innovation)</span><span id="rd_txt">100%</span></div>
+                <div class="led-container"><div id="rd_bar" class="led-fill" style="width:100%; background:#00ffff;"></div></div>
+
+                <div class="metric-row" style="margin-top: 6px;"><span>Avg Dependency (The Cage)</span><span id="dep_txt">0%</span></div>
+                <div class="led-container"><div id="dep_bar" class="led-fill" style="width:0%; background:#4a90e2;"></div></div>
+                
+                <div class="metric-row" style="margin-top: 6px;"><span>Client Satisfaction</span><span id="sat_txt">100%</span></div>
+                <div class="led-container"><div id="sat_bar" class="led-fill" style="width:100%; background:#00ff00;"></div></div>
+
+                <div class="metric-row" style="margin-top: 6px;"><span>Political Capital</span><span id="pol_txt">50%</span></div>
+                <div class="led-container"><div id="pol_bar" class="led-fill" style="width:50%; background:#ffd700;"></div></div>
+
+                <div class="metric-row" style="margin-top: 6px; font-weight:bold;"><span>Engineering Morale</span><span id="morale_txt">100%</span></div>
+                <div class="led-container"><div id="morale_bar" class="led-fill" style="width:100%; background:#9370db;"></div></div>
+                
+                <div class="metric-row" style="margin-top: 6px; font-weight:bold; color:#000080;"><span>Board Patience</span><span id="board_txt">100%</span></div>
+                <div class="led-container"><div id="board_bar" class="led-fill" style="width:100%; background:#00ff00;"></div></div>
+
+                <div class="metric-row" style="margin-top: 6px; color:#8b0000; font-weight:bold;"><span id="threat_label">Market Threat</span><span id="threat_txt">0%</span></div>
+                <div class="led-container"><div id="threat_bar" class="led-fill" style="width:0%; background:#ff8c00;"></div></div>
+            </div></div>
+
+            <div class="window" style="margin-bottom:0;"><div class="title-bar">PROFIT_TRENDS</div><div class="content-area"><canvas id="perf_canvas"></canvas></div></div>
+
+            <div class="window" style="flex-grow: 1; margin-bottom:0;"><div class="title-bar">INTERNAL_COMMS</div><div class="content-area" style="display:flex; flex-direction:column; height: 100%;">
+                <button onclick="open_inbox()" id="btn_inbox" style="margin-bottom: 8px; background: #fffacd; height: 40px; font-size: 14px;">OPEN SECURE INBOX (0)</button>
+                <div id="event_log" style="flex-grow:1; min-height: 80px;"></div>
+            </div></div>
+        </div>
+    </div>
+</div>
+
+<div id="modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; align-items:center; justify-content:center;">
+    <div class="window" style="width:95%; max-width:600px;">
+        <div class="title-bar"><span id="m_title">MEMO</span></div>
+        <div class="content-area" id="m_body" style="font-size: 14px; line-height: 1.5; padding: 15px;"></div>
+        <div id="m_buttons" style="padding: 10px; display: flex; flex-direction: column; gap: 8px;"></div>
+    </div>
+</div>
+
+<div id="inbox_modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1500; align-items:center; justify-content:center;">
+    <div class="window" style="width:95%; max-width:800px; height:80vh; display:flex; flex-direction:column;">
+        <div class="title-bar"><span>SECURE_INBOX</span><span>[X]</span></div>
+        <div class="content-area inbox-modal-content" style="display:flex; flex-direction:row; height:100%; padding:0; background:#dfdfdf; overflow: hidden;">
+            <div class="inbox-list-area" style="width: 280px; background:#fff; border-right: 1px solid var(--win-shadow); overflow-y:auto;" id="inbox_list"></div>
+            <div style="flex-grow:1; padding: 15px; background:#f5f5f5; overflow-y:auto; font-family:'Courier New', monospace; font-size:14px; line-height: 1.5;" id="inbox_reader">Select a message to read.</div>
+        </div>
+        <button onclick="close_inbox()" style="margin: 10px; height: 40px; font-size: 14px;">CLOSE INBOX</button>
+    </div>
+</div>
+
+<div id="game_over_modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; align-items:center; justify-content:center;">
+    <div class="window" style="width:95%; max-width:600px;"><div class="title-bar"><span id="go_title">GAME OVER</span></div><div class="content-area" id="go_body" style="font-size: 15px; line-height: 1.5; padding: 15px;"></div><br><button onclick="reset_game()" style="width:100%; height: 50px; font-size: 16px; margin: 10px 0;">REBOOT_SYSTEM</button></div>
+</div>
+
+<script>
+const GDP_DIVISOR = 3500000;
+let sim_timer = null;
+let current_speed = 0; 
+let current_memo = null;
+
+const competitors = [
+    { name: "CanvasOS", desc: "Venture-backed startup" },
+    { name: "Aperture Libre", desc: "Open-source collective" },
+    { name: "PixelForge", desc: "Aggressive domestic rival" },
+    { name: "GNU-Design", desc: "Radical homebrew subversives" },
+    { name: "StudioX", desc: "Enterprise defectors" }
+];
+
+let state = {
+    month: 1, profit: 500000, gdp: 100,
+    global_sat: 100, global_dep: 0, pol: 50, board_patience: 100, 
+    target_margin: 30000, 
+    eng_morale: 100, eng_count: 150,
+    rd_efficiency: 1.0, last_speed: 0,
+    ext: 0, lob: 0, last_m_ext: 0, over: false, modal_active: false,
+    history: { p: [500000], g: [100] },
+    market_expansion: false,
+    
+    comp_idx: 0, comp_threat: 0, comp_locked: false,
+    
+    inbox: [], unread: 0, ticker_news: [],
+    segments: [
+        { name: "Hobbyists", count: 5000, v: 0.8, sat: 100, d: 0 },
+        { name: "Indie Pros", count: 3000, v: 1.2, sat: 100, d: 0 },
+        { name: "Studio Pros", count: 1500, v: 1.8, sat: 100, d: 0 },
+        { name: "Enterprise", count: 500, v: 2.5, sat: 100, d: 0 }
+    ],
+    memos_deck: [
+        {
+            id: "adv_axiom",
+            condition: function(protocols) { return state.month > 6 && !protocols.i_sas; },
+            title: "[ADVISOR] The 'Axiom' Playbook",
+            text: "CEO, we are leaving money on the table. Look at 'Axiom Design's' historic transition to the Cloud. They revoked perpetual licenses and forced a monthly toll. The users screamed, but recurring revenue tripled. \n\nTrigger the SaaS Transition. If we lock the formats first, they can't leave.",
+            options: [{ text: "Acknowledge Strategy", action: function() { return "DECISION: Advised to execute SaaS transition."; } }], triggered: false
+        },
+        {
+            id: "adv_pythia",
+            condition: function(protocols, price) { return price > 20 && state.global_dep > 50; },
+            title: "[CONFLICT] Enterprise License Audit",
+            text: "<b>[ADVISOR]:</b> We have them locked in. Run the 'Pythia Data' Playbook. Execute an aggressive 'seat audit' on our Enterprise clients. Fine them retroactively for shared logins. Instant $500k injection.\n\n<b>[COUNSEL]:</b> Extorting enterprise clients invites brutal litigation and shatters their satisfaction.",
+            options: [
+                { text: "Execute Audit (+$500k, -Sat, -Pol)", action: function() { 
+                    state.profit += 500000; 
+                    state.pol -= 15; 
+                    // SAFE ACCESS: Check bounds before accessing array
+                    if (state.segments.length > 3) {
+                        state.segments[3].sat = Math.max(0, state.segments[3].sat - 40);
+                    }
+                    return "DECISION: Audit executed. $500k extracted."; 
+                } },
+                { text: "Heed Counsel (Do Nothing)", action: function() { return "DECISION: Audit declined. Legal risk mitigated."; } }
+            ], triggered: false
+        },
+        {
+            id: "adv_goliath",
+            condition: function(protocols) { return protocols.t_st && state.month > 10; },
+            title: "[CONFLICT] The 'Goliath' Squeeze",
+            text: "<b>[ADVISOR]:</b> Let's escalate to the 'Goliath Prime' strategy. We push an update that automatically enrolls all users into a higher tier, hiding the opt-out in a 6-page maze. Massive ARPU bump.\n\n<b>[COUNSEL]:</b> This crosses into wire fraud. The FTC is currently prosecuting massive e-commerce companies for this exact 'roach motel' architecture.",
+            options: [
+                { text: "Deploy Roach Motel (+$10/user, -Sat, -Pol)", action: function() { 
+                    let slider = document.getElementById('price_slider');
+                    if (slider) { 
+                        slider.value = parseInt(slider.value) + 10; 
+                        update_locks(); 
+                    }
+                    state.pol -= 25; state.global_sat -= 25; 
+                    return "DECISION: Roach Motel deployed. FTC attention drawn."; 
+                }},
+                { text: "Heed Counsel (Decline)", action: function() { return "DECISION: Declined to escalate dark patterns."; } }
+            ], triggered: false
+        },
+        {
+            id: "adv_free_market",
+            condition: function(protocols) { return state.market_expansion && state.month > 12; },
+            title: "[BOARD] Volume Over Margin Recognized",
+            text: "<b>[BOARD OF DIRECTORS]:</b> We note that you have rejected standard extraction protocols in favor of Universal Interoperability and fair pricing. While your margins are exceptionally thin, the explosion in our Total Addressable Market (TAM) is undeniable. \n\nWe will temporarily excuse the lack of 'lock-in' architecture, provided user volume continues to meet our escalating revenue targets. Do not slip.",
+            options: [
+                { text: "Continue the Friedman Path", action: function() { state.board_patience += 15; return "DECISION: Board accepts volume strategy. Pressure remains high."; } }
+            ], triggered: false
+        },
+        {
+            id: "adv_retro_tos",
+            condition: function(protocols) { return state.global_dep > 80 && !state.market_expansion && state.month > 20; },
+            title: "[CONFLICT] The 'Nexus Engine' Tax",
+            text: "<b>[ADVISOR]:</b> Our users have built their entire pipelines on our code. It's time for the 'Nexus Engine' playbook. We retroactively update the Terms of Service to charge them a royalty fee on the work they've *already* published. Massive cash injection.\n\n<b>[COUNSEL]:</b> Retroactively altering a contract is legally dubious and will permanently destroy user trust. It is reputational suicide.",
+            options: [
+                { text: "Enact Retroactive Tax (+$750k, -Sat)", action: function() { 
+                    state.profit += 750000; 
+                    state.global_sat = Math.max(0, state.global_sat - 60); 
+                    return "DECISION: Retroactive Tax applied. Trust shattered. Cash secured."; 
+                } },
+                { text: "Maintain Current ToS", action: function() { return "DECISION: ToS unchanged. Reputation maintained."; } }
+            ], triggered: false
+        },
+        {
+            id: "adv_tax_lobby",
+            condition: function(protocols) { return state.pol > 60 && state.month > 12 && state.comp_threat > 10; },
+            title: "[CONFLICT] The Public Utility Blockade",
+            text: "<b>[COUNSEL]:</b> State universities have secured federal grants to build a free, open-source alternative to our software as a public utility.\n\n<b>[ADVISOR]:</b> Run the 'Filing Software' playbook. Deploy the PAC immediately. Spend $200k to lobby state legislatures to pass a law prohibiting government funds from being used to build software that competes with private enterprise. Blockade them.",
+            options: [
+                { text: "Deploy PAC Blockade (-$200k, -Threat)", action: function() { 
+                    state.profit -= 200000; 
+                    state.comp_threat = 0; 
+                    state.pol -= 10; 
+                    return "DECISION: Lobbying successful. Public utility software banned."; 
+                } },
+                { text: "Let Public Sector Compete", action: function() { 
+                    state.comp_threat += 25; 
+                    return "DECISION: Blockade refused. Public software enters market."; 
+                } }
+            ], triggered: false
+        },
+        {
+            id: "adv_buyback",
+            condition: function(protocols) { return state.profit > 1200000 && state.month > 8; },
+            title: "[CONFLICT] Excess Capital Allocation",
+            text: "<b>[ADVISOR]:</b> We have massive liquidity. The Board expects a $300k stock buyback to inflate share prices immediately.\n\n<b>[COUNSEL]:</b> Our engineers built the tools driving this revenue. Distributing that $300k as employee bonuses will cement their loyalty and protect our IP from leaking to competitors.",
+            options: [
+                { text: "Execute Stock Buyback (+Board, -Morale)", action: function() { 
+                    state.profit -= 300000; 
+                    state.board_patience += 20; 
+                    state.eng_morale -= 15; 
+                    return "DECISION: Buyback executed. Board pleased, engineers alienated."; 
+                } },
+                { text: "Distribute Bonuses (+Morale, -Board)", action: function() { 
+                    state.profit -= 300000; 
+                    state.eng_morale += 30; 
+                    state.board_patience -= 10; 
+                    return "DECISION: Bonuses distributed. Engineers loyal, Board irritated."; 
+                } }
+            ], triggered: false
+        },
+        {
+            id: "adv_union",
+            condition: function(protocols) { return state.eng_morale < 40 && state.eng_count > 100; },
+            title: "[HR] Unionization Whispers",
+            text: "<b>[COUNSEL]:</b> Due to low morale, organizers are secretly circulating union cards. If they unionize, they will demand a halt to dark patterns and data brokering.\n\n<b>[ADVISOR]:</b> Identify the organizers and terminate them immediately. It's illegal, but the NLRB fines are cheaper than a unionized workforce.",
+            options: [
+                { text: "Fire Organizers (-Count, -Sat, +Fear)", action: function() { 
+                    state.eng_count -= 15; 
+                    state.global_sat -= 10; 
+                    state.pol -= 10; 
+                    return "DECISION: Organizers fired. Workforce terrified but compliant."; 
+                } },
+                { text: "Allow Organization (-Patience, +Morale)", action: function() { 
+                    state.board_patience -= 25; 
+                    state.eng_morale += 20; 
+                    return "DECISION: Organization permitted. Board furious."; 
+                } }
+            ], triggered: false
+        },
+        {
+            id: "adv_homebrew",
+            condition: function(protocols) { 
+                let comp_desc = (state.comp_idx >= 0 && state.comp_idx < competitors.length) ? (competitors[state.comp_idx].desc || "") : "";
+                return state.comp_threat > 20 && comp_desc.indexOf("homebrew") !== -1; 
+            },
+            title: "[CONFLICT] The Homebrew Subversion",
+            text: "<b>[COUNSEL]:</b> A solo developer built a plugin that decrypts our proprietary format. \n\n<b>[ADVISOR]:</b> Execute 'Embrace, Extend, Extinguish'. Offer the kid a $75k job. Once he signs, we own his code. We kill the plugin and bury him in middle management.",
+            options: [
+                { text: "Hire & Extinguish (-$75k, -Threat)", action: function() { 
+                    state.profit -= 75000; 
+                    state.comp_threat = 0; 
+                    return "DECISION: Dev hired. Plugin killed. Threat neutralized."; 
+                } },
+                { text: "Sue into Bankruptcy (-$25k, -Sat)", action: function() { 
+                    state.profit -= 25000; 
+                    state.comp_threat = Math.max(0, state.comp_threat - 15); 
+                    state.global_sat -= 10; 
+                    return "DECISION: Dev sued. PR damage taken."; 
+                } }
+            ], triggered: false
+        },
+        {
+            id: "c_board_warn",
+            condition: function() { return state.board_patience < 40; },
+            title: "BOARD DIRECTIVE: Fiduciary Warning",
+            text: "The Board is deeply concerned by your recent margins. If you are operating 'pro-consumer' ethical protocols, you are violating your fiduciary duty to maximize shareholder value. Increase extraction yield immediately or face termination.",
+            options: [{ text: "Acknowledge Warning", action: function() { return "DECISION: Acknowledged. Fiduciary risk remains critical."; } }], triggered: false
+        }
+    ]
+};
+
+function isChecked(id) {
+    let el = document.getElementById(id);
+    return el ? el.checked : false;
+}
+
+function init() {
+    const c = document.getElementById('perf_canvas');
+    resizeCanvas(c);
+    window.addEventListener('resize', function() { resizeCanvas(document.getElementById('perf_canvas')); });
+
+    state.memos_deck.push({
+        id: "onboarding", condition: function(){ return false; }, title: "[BOARD] Fiduciary Duty", 
+        text: "You are the newly appointed CEO of Cander Creative. \n\nCapitalism relies on competition. The Board wants you to <b>destroy competition</b>. Build a digital toll booth. Destroy interoperability. Weaponize switching costs. \n\nAlternatively, you may attempt to survive the pure Free Market, relying entirely on volume, innovation, and merit without building a cage. \n\nThe Board expects Month-over-Month profit growth regardless of your path. Do not miss your targets.",
+        options: [{text:"Initialize Terminal", action:function() { return "DECISION: Terminal Initialized."; } }], triggered: true
+    });
+    
+    try {
+        trigger_interactive_memo(state.memos_deck[state.memos_deck.length-1]);
+    } catch(e) {
+        console.error("init error:", e);
+        alert("Game initialization failed - see console for details");
+    }
+    
+    let label = document.getElementById('threat_label');
+    if (label && state.comp_idx >= 0 && state.comp_idx < competitors.length) {
+        try {
+            if (competitors[state.comp_idx] && competitors[state.comp_idx].name) {
+                label.innerText = competitors[state.comp_idx].name + " Threat";
+            }
+        } catch(e) {
+            console.error("threat_label error:", e);
+        }
+    }
+    
+    render_high_scores();
+    update_locks();
+    update_ui();
+}
+
+function resizeCanvas(canvas) {
+    if (!canvas) return;
+    canvas.width = canvas.clientWidth;
+    canvas.height = canvas.clientHeight;
+    render_graph();
+}
+
+function show_intel(text) {
+    const intel_display = document.getElementById('intel_display');
+    if (intel_display) intel_display.innerText = text;
+}
+
+function render_high_scores() {
+    const list = document.getElementById('high_scores_list');
+    if (!list) return;
+    
+    try {
+        let scores = JSON.parse(localStorage.getItem('cander_high_scores') || '[]');
+        if(scores.length === 0) { 
+            list.innerHTML = "No historical extraction data."; 
+            return; 
+        }
+        
+        let output = "";
+        for(let i=0; i<scores.length; i++) {
+            output += '<div class="leaderboard-row"><span>' + (i+1) + '. $' + Math.round(scores[i].ext).toLocaleString() + '</span><span style="color:#555;">[Month ' + scores[i].q + ']</span></div>';
+        }
+        list.innerHTML = output;
+    } catch(e) {
+        console.error("render_high_scores error:", e);
+        list.innerHTML = "Error loading high scores.";
+    }
+}
+
+function save_high_score() {
+    try {
+        let scores = JSON.parse(localStorage.getItem('cander_high_scores') || '[]');
+        scores.push({ ext: state.ext, q: state.month });
+        scores.sort(function(a, b) { return b.ext - a.ext; }); 
+        scores = scores.slice(0, 5); 
+        localStorage.setItem('cander_high_scores', JSON.stringify(scores));
+        render_high_scores();
+    } catch(e) {
+        console.error("save_high_score error:", e);
+    }
+}
+
+function update_locks() {
+    // DOM GUARDS
+    const e_uni = document.getElementById('e_uni');
+    const e_priv = document.getElementById('e_priv');
+    const e_trans = document.getElementById('e_trans');
+    const i_cld = document.getElementById('i_cld');
+    const i_fmt = document.getElementById('i_fmt');
+    const i_sas = document.getElementById('i_sas');
+    const t_pd = document.getElementById('t_pd');
+    const t_st = document.getElementById('t_st'); 
+    const t_hf = document.getElementById('t_hf');
+    const t_db = document.getElementById('t_db');
+    
+    const wrap_i_fmt = document.getElementById('wrap_i_fmt');
+    const wrap_i_sas = document.getElementById('wrap_i_sas');
+    const wrap_t_pd = document.getElementById('wrap_t_pd');
+    const wrap_t_st = document.getElementById('wrap_t_st');
+    const wrap_t_hf = document.getElementById('wrap_t_hf');
+    const wrap_t_db = document.getElementById('wrap_t_db');
+
+    if (!e_uni || !e_priv || !e_trans || !i_cld || !i_fmt || !i_sas || 
+        !t_pd || !t_st || !t_hf || !t_db || !wrap_i_fmt || !wrap_i_sas || 
+        !wrap_t_pd || !wrap_t_st || !wrap_t_hf || !wrap_t_db) return; 
+
+    // BULLETPROOF CASCADE LOGIC
+    if (e_uni.checked) {
+        i_fmt.disabled = true; wrap_i_fmt.classList.add('locked');
+        i_sas.disabled = true; wrap_i_sas.classList.add('locked');
+    } else {
+        i_fmt.disabled = !i_cld.checked;
+        if (i_fmt.disabled) {
+            i_fmt.checked = false; wrap_i_fmt.classList.add('locked');
+        } else {
+            wrap_i_fmt.classList.remove('locked');
+        }
+
+        i_sas.disabled = !i_fmt.checked;
+        if (i_sas.disabled) {
+            i_sas.checked = false; wrap_i_sas.classList.add('locked');
+        } else {
+            wrap_i_sas.classList.remove('locked');
+        }
+    }
+
+    if (e_priv.checked) {
+        t_db.checked = false; t_db.disabled = true; wrap_t_db.classList.add('locked');
+    } else {
+        t_db.disabled = false; wrap_t_db.classList.remove('locked');
+    }
+
+    if (e_trans.checked) {
+        t_pd.checked = false; t_pd.disabled = true; wrap_t_pd.classList.add('locked');
+        t_hf.checked = false; t_hf.disabled = true; wrap_t_hf.classList.add('locked');
+        t_st.checked = false; t_st.disabled = true; wrap_t_st.classList.add('locked');
+    } else {
+        t_pd.disabled = false; wrap_t_pd.classList.remove('locked');
+        t_hf.disabled = false; wrap_t_hf.classList.remove('locked');
+        t_st.disabled = false; wrap_t_st.classList.remove('locked');
+    }
+    
+    let price_slider = document.getElementById('price_slider');
+    if (price_slider) {
+        try {
+            document.getElementById('price_val').innerText = price_slider.value;
+        } catch(e) {
+            console.error("price_val update error:", e);
+        }
+    }
+    
+    generate_news();
+}
+
+function trigger_interactive_memo(memo) {
+    state.last_speed = current_speed; 
+    set_speed(0); 
+    
+    try {
+        state.modal_active = true;
+        current_memo = memo;
+        
+        let m_title = document.getElementById('m_title');
+        let m_body = document.getElementById('m_body');
+        let m_buttons = document.getElementById('m_buttons');
+        let modal_el = document.getElementById('modal');
+        
+        if(!m_title || !m_body || !m_buttons || !modal_el) return;
+        
+        m_title.innerText = "SYSTEM INTERRUPT: " + (memo.title || "Unknown Memo");
+        m_body.innerHTML = '<div style="border-left: 3px solid #000080; padding-left: 12px; font-family: \'Courier New\', monospace; background: #f0f0f0; font-size: 14px; line-height: 1.6;">' + (memo.text ? memo.text.replace(/\n/g, '<br>') : "") + '</div>';
+        
+        let btn_html = "";
+        if (memo.options && Array.isArray(memo.options) && memo.options.length > 0) {
+            for(let idx=0; idx < memo.options.length; idx++) {
+                try {
+                    btn_html += '<button class="action-button" onclick="resolve_memo(' + idx + ')">' + memo.options[idx].text + '</button>';
+                } catch(e) {
+                    console.error("memo button error:", e);
+                }
+            }
+        } else {
+            btn_html = '<button class="action-button" onclick="resolve_memo(-1)">ACKNOWLEDGE</button>';
+        }
+        m_buttons.innerHTML = btn_html;
+        
+        modal_el.style.display = 'flex';
+        log("INBOX: Action required - " + (memo.title || "Unknown"));
+        update_ui();
+    } catch(e) {
+        console.error("trigger_interactive_memo error:", e);
+        state.modal_active = false;
+    }
+}
+
+function resolve_memo(option_index) {
+    try {
+        let result_text = "DECISION: Acknowledged.";
+        
+        if (option_index >= 0 && 
+            current_memo && 
+            current_memo.options && 
+            Array.isArray(current_memo.options) &&
+            current_memo.options[option_index]) {
+            
+            // Execute action with error handling
+            try {
+                result_text = current_memo.options[option_index].action();
+            } catch(action_error) {
+                console.error("Memo action error:", action_error);
+                result_text = "ERROR: Action failed - see console";
+            }
+        }
+        
+        state.inbox.unshift({ 
+            title: current_memo ? current_memo.title : "Unknown Memo", 
+            text: (current_memo && current_memo.text ? current_memo.text + "\n\n---------------------------\n" : "") + result_text, 
+            read: false, date: "Month " + state.month 
+        });
+        state.unread++;
+        state.inbox = state.inbox.slice(0, 50); 
+        
+        let modal_el = document.getElementById('modal');
+        if (modal_el) modal_el.style.display = 'none';
+        
+        current_memo = null;
+        
+        if(state.last_speed > 0 && !state.over) { 
+            set_speed(state.last_speed); 
+        } else {
+            console.log("Game remains paused after memo resolution");
+        }
+        
+        update_ui();
+    } catch(e) {
+        console.error("resolve_memo error:", e);
+        alert("Memo resolution failed - see console for details");
+    }
+}
+
+function open_inbox() {
+    state.last_speed = current_speed; 
+    set_speed(0); 
+    let inbox_el = document.getElementById('inbox_modal');
+    if(inbox_el) inbox_el.style.display = 'flex';
+    render_inbox_list();
+}
+
+function close_inbox() {
+    let inbox_el = document.getElementById('inbox_modal');
+    if(inbox_el) inbox_el.style.display = 'none';
+    if(state.last_speed > 0 && !state.over) { 
+        set_speed(state.last_speed); 
+    }
+    update_ui();
+}
+
+function render_inbox_list() {
+    const list = document.getElementById('inbox_list');
+    if (!list) return;
+    
+    try {
+        let output = "";
+        for(let i=0; i<state.inbox.length; i++) {
+            let msg = state.inbox[i];
+            let cl = msg.read ? 'inbox-item' : 'inbox-item unread';
+            output += '<div class="' + cl + '" onclick="read_msg(' + i + ')"><div style="font-size:12px; color:#666; margin-bottom: 4px;">' + (msg.date || "") + '</div><div>' + (msg.title || "Untitled") + '</div></div>';
+        }
+        list.innerHTML = output;
+    } catch(e) {
+        console.error("render_inbox_list error:", e);
+        list.innerHTML = "Error loading inbox.";
+    }
+}
+
+function read_msg(index) {
+    try {
+        const msg = state.inbox[index];
+        if(msg && !msg.read) { 
+            msg.read = true; 
+            state.unread = Math.max(0, state.unread - 1); 
+            render_inbox_list(); 
+        }
+        
+        let reader = document.getElementById('inbox_reader');
+        if(reader) {
+            let title = msg ? msg.title : "Unknown Message";
+            let text = msg ? msg.text.replace(/\n/g, '<br>') : "";
+            reader.innerHTML = '<h3 style="margin-top:0; border-bottom:1px solid #ccc; padding-bottom:8px;">' + title + '</h3><p>' + text + '</p>';
+        }
+    } catch(e) {
+        console.error("read_msg error:", e);
+    }
+}
+
+function set_speed(ms) {
+    if(state.over || state.modal_active) return;
+    
+    try {
+        if(sim_timer) { 
+            clearInterval(sim_timer); 
+            sim_timer = null; 
+        }
+        current_speed = ms;
+        
+        let b_p = document.getElementById('btn_p_pause');
+        let b_1 = document.getElementById('btn_p_1x');
+        let b_2 = document.getElementById('btn_p_2x');
+        
+        if(b_p) b_p.className = "ctrl-btn";
+        if(b_1) b_1.className = "ctrl-btn";
+        if(b_2) b_2.className = "ctrl-btn";
+        
+        const status = document.getElementById('clock_status');
+        if(!status) return;
+        
+        if (ms === 0) {
+            if(b_p) b_p.className = "ctrl-btn ctrl-active";
+            status.innerText = "HALTED"; 
+            status.className = "status-halted";
+            log("CLOCK: Execution paused.");
+        } else {
+            if (ms === 2500 && b_1) b_1.className = "ctrl-btn ctrl-active";
+            if (ms === 1250 && b_2) b_2.className = "ctrl-btn ctrl-active";
+            
+            sim_timer = setInterval(next_tick, ms);
+            status.innerText = "RUNNING"; 
+            status.className = "status-running";
+            log("CLOCK: Engine engaged.");
+        }
+    } catch(e) {
+        console.error("set_speed error:", e);
+    }
+}
+
+function acquire_competitor() {
+    try {
+        if(state.over || state.modal_active || state.comp_locked) return;
+        
+        let cost = Math.floor(state.comp_threat * 15000);
+        if(state.profit >= cost) {
+            state.profit -= cost; 
+            
+            // Safe access to competitors array
+            let comp_name = "Unknown";
+            if(state.comp_idx >= 0 && 
+               state.comp_idx < competitors.length && 
+               competitors[state.comp_idx] && 
+               competitors[state.comp_idx].name) {
+                comp_name = competitors[state.comp_idx].name;
+            }
+            
+            log("ACQUISITION: " + comp_name + " purchased and deprecated.");
+            
+            state.comp_threat = 0;
+            state.comp_locked = false; 
+            
+            // Safe increment with bounds check
+            state.comp_idx = (state.comp_idx + 1) % competitors.length;
+            
+            let lbl = document.getElementById('threat_label');
+            if(lbl && 
+               state.comp_idx >= 0 && 
+               state.comp_idx < competitors.length &&
+               competitors[state.comp_idx] &&
+               competitors[state.comp_idx].name) {
+                lbl.innerText = competitors[state.comp_idx].name + " Threat";
+                log("MARKET ALERT: New alternative '" + competitors[state.comp_idx].name + "' incubating...");
+            } else {
+                log("MARKET ALERT: New competitor threat detected.");
+            }
+            
+            generate_news();
+            update_ui();
+        } else { 
+            log("ACQUISITION FAILED: Insufficient capital. Cost: $" + cost.toLocaleString() + ", Available: $" + state.profit.toLocaleString()); 
+        }
+    } catch(e) {
+        console.error("acquire_competitor error:", e);
+        alert("Acquisition failed - see console for details");
+    }
+}
+
+function generate_news() {
+    try {
+        let pool = [];
+        
+        pool.push("S&P 500 holds steady as enterprise SaaS revenues soar...");
+        pool.push("Tech sector analysts predict massive consolidation in creative software market...");
+
+        if(state.profit > 1000000) pool.push("Cander Creative announces record-breaking stock buyback program...");
+        if(state.global_dep > 70) pool.push("Analysts praise Cander's 'impenetrable ecosystem moat'. Enterprise churn drops to zero...");
+        
+        if(isChecked('inf_moat')) pool.push("Cander Creative funds PACs pushing for 'safety regulations' that would effectively ban open-source startups...");
+        if(isChecked('inf_pr')) pool.push("PR Spin successful: Business Journals name Cander 'Top Innovator' despite user grumbling over price hikes...");
+
+        if(state.global_sat < 60) pool.push("Outrage trends on social media as Cander Creative hikes subscription tolls...");
+        if(state.global_sat < 30) pool.push("Independent studios report bankruptcy due to exorbitant software licensing fees...");
+        if(isChecked('t_db')) pool.push("Privacy advocates warn of aggressive telemetry harvesting in creative applications...");
+        if(isChecked('i_sas')) pool.push("Users locked out of historical files as perpetual licenses are globally revoked...");
+
+        if(state.eng_morale < 40) pool.push("Industry forums for Cander Creative describe 'toxic, extraction-first culture'...");
+        if(isChecked('hr_nca')) pool.push("Cander Creative sues former engineers over non-compete clauses. 'They are trapped,' says legal expert...");
+
+        if(state.market_expansion) pool.push("Global hardware and creative markets expanding rapidly due to accessible, open-standard software ecosystems...");
+
+        let comp_name = "Unknown";
+        if(state.comp_idx >= 0 && state.comp_idx < competitors.length && competitors[state.comp_idx]) {
+            comp_name = competitors[state.comp_idx].name || "Unknown";
+        }
+
+        if(state.comp_threat > 15 && !state.comp_locked) pool.push("Alternative tool '" + comp_name + "' gains early traction on code repositories...");
+        if(state.comp_threat > 40 && !state.comp_locked) pool.push("Forums swell with ex-Cander users sharing migration tutorials for " + comp_name + "...");
+        if(state.comp_locked) pool.push("Cander user base imploding as " + comp_name + " cracks proprietary format lock-in...");
+
+        if(state.pol < 40) pool.push("Senate subcommittee announces hearings on tech monopolies and software lock-in...");
+
+        pool.sort(function() { return 0.5 - Math.random(); });
+        let selected = pool.slice(0, 4).join(" | ");
+        let ticker = document.getElementById('news_ticker');
+        if (ticker) ticker.innerText = "+++ LATEST: " + selected + " +++";
+    } catch(e) {
+        console.error("generate_news error:", e);
+    }
+}
+
+function next_tick() { 
+    try {
+        if(state.over || state.modal_active) return;
+        
+        let slider = document.getElementById('price_slider');
+        let price = 10; 
+        if (slider) {
+            let val = parseInt(slider.value, 10);
+            if (!isNaN(val) && val >= 0 && val <= 150) {
+                price = val;
+            }
+        }
+        
+        const protocols = {
+            i_rd: isChecked('i_rd'),
+            i_cld: isChecked('i_cld'),
+            i_fmt: isChecked('i_fmt'),
+            i_sas: isChecked('i_sas'),
+            t_pd: isChecked('t_pd'),
+            t_st: isChecked('t_st'),
+            t_hf: isChecked('t_hf'),
+            t_db: isChecked('t_db'),
+            e_uni: isChecked('e_uni'),
+            e_priv: isChecked('e_priv'),
+            e_trans: isChecked('e_trans'),
+            inf_moat: isChecked('inf_moat'),
+            inf_pr: isChecked('inf_pr'),
+            hr_nca: isChecked('hr_nca')
+        };
+        
+        let expenses = 0;
+        let pol_boost = 0;
+        let ethical_burn = 0;
+        let morale_burn = 0;
+        let sat_boost = 0;
+        
+        if(protocols.i_rd) { 
+            expenses += 30000; 
+            state.rd_efficiency = Math.max(0.1, state.rd_efficiency - 0.02); 
+        } else { 
+            state.rd_efficiency = Math.min(1.0, state.rd_efficiency + 0.05); 
+        }
+        if(protocols.i_cld) expenses += 50000;
+        
+        if(protocols.e_priv) { 
+            expenses += 15000; 
+            ethical_burn += 3; 
+            morale_burn -= 2; 
+            sat_boost += 2; 
+        }
+        if(protocols.e_uni) { 
+            ethical_burn += 3; 
+            morale_burn -= 2; 
+        }
+        if(protocols.e_trans) { 
+            ethical_burn += 3; 
+            sat_boost += 2; 
+        }
+        
+        if(protocols.inf_moat) { 
+            expenses += 65000; 
+            pol_boost += 5; 
+        }
+        if(protocols.inf_pr) { 
+            expenses += 15000; 
+            sat_boost += 3; 
+        }
+
+        state.profit -= expenses;
+
+        let base_yield = price; 
+        let sat_drain = Math.max(0, (price - 15) * 0.05); 
+        
+        if(protocols.t_pd) { 
+            base_yield += 5; 
+            sat_drain += 1.5; 
+            morale_burn += 1; 
+        }
+        if(protocols.t_st) { 
+            base_yield += 3; 
+            sat_drain += 1; 
+            morale_burn += 1; 
+        }
+        if(protocols.t_hf) { 
+            base_yield += 2; 
+            sat_drain += 0.5; 
+            morale_burn += 1; 
+        }
+        if(protocols.t_db) { 
+            base_yield += 6; 
+            sat_drain += 2; 
+            morale_burn += 2; 
+        }
+        if(price > 40) morale_burn += 1;
+
+        if(protocols.i_sas) { 
+            sat_drain += 1.5; 
+        } 
+        if(protocols.i_fmt) sat_drain += 0.5; 
+        if(protocols.e_trans) { 
+            sat_drain -= 1.5; 
+        } 
+        
+        morale_burn = Math.min(10, morale_burn); // Explicit bounding
+        state.eng_morale = Math.max(0, state.eng_morale - Math.max(0, morale_burn));
+        
+        let operating_margin = state.last_m_ext - expenses; 
+        let hires = Math.max(0, Math.floor(operating_margin / 80000));
+        
+        let quit_rate = 0;
+        if (state.eng_morale < 50) quit_rate = ((50 - state.eng_morale) / 50) * 0.05; 
+        let natural_quits = Math.floor(state.eng_count * quit_rate);
+        let actual_quits = natural_quits;
+
+        if (protocols.hr_nca) {
+            actual_quits = Math.floor(natural_quits * 0.1); 
+            state.eng_morale = Math.max(0, state.eng_morale - 2); 
+        }
+
+        state.eng_count = Math.max(10, state.eng_count + hires - actual_quits);
+
+        if (!state.comp_locked) {
+            let threat_growth = ((100 - state.global_sat) / 120) + (price / 150);
+            if (protocols.i_sas) threat_growth *= 1.5; 
+            if (protocols.e_uni) threat_growth *= 0.1; 
+            if (protocols.inf_moat) threat_growth *= 0.3; 
+            
+            threat_growth += (actual_quits * 0.4); 
+
+            state.comp_threat = Math.min(100, Math.max(0, state.comp_threat + threat_growth));
+
+            if (state.comp_threat >= 80 && !state.comp_locked) {
+                state.comp_locked = true;
+                
+                // Safe array access with bounds checking
+                for(let i=0; i<state.segments.length; i++) {
+                    if(state.segments[i]) {
+                        state.segments[i].d = Math.max(0, state.segments[i].d - 40);
+                    }
+                }
+                
+                let comp_name = "Unknown";
+                if(state.comp_idx >= 0 && state.comp_idx < competitors.length) {
+                    comp_name = competitors[state.comp_idx] ? competitors[state.comp_idx].name : "Unknown";
+                }
+                
+                state.memos_deck.push({
+                    id: "c_comp_escape", condition: function(){return true;}, 
+                    title: "[CRITICAL] " + (comp_name || "Competitor") + " Escape Velocity",
+                    text: "The rival platform has secured venture funding and cracked our format lock-in. Expect catastrophic defection.",
+                    options: [{text:"Brace for Defection", action:function(){return "DECISION: Unavoidable.";}}], triggered: false
+                });
+            }
+        }
+
+        state.market_expansion = (protocols.e_uni && protocols.e_trans && price <= 25 && state.global_sat > 70);
+
+        let total_m_ext = 0;
+        let total_users_lost = 0;
+        let current_total_users = 0;
+
+        for(let i=0; i<state.segments.length; i++) {
+            try {
+                if(!state.segments[i]) continue;
+                
+                let seg = state.segments[i];
+                let target_d = (protocols.i_cld ? 10 : 0) + (protocols.i_fmt ? 45 : 0) + (protocols.i_sas ? 30 : 0);
+                if (protocols.i_rd) target_d += (15 * state.rd_efficiency); 
+                
+                if (seg.name === "Studio Pros") target_d += 15;
+                if (seg.name === "Enterprise") target_d += 25;
+                
+                if(state.comp_locked) target_d = Math.max(0, target_d - 40);
+                if(protocols.e_uni) target_d = 0; 
+
+                seg.d = Math.min(100, target_d);
+                seg.sat = Math.min(100, Math.max(0, seg.sat - sat_drain + sat_boost));
+
+                let sat_factor = (100 - seg.sat) / 100; 
+                let lock_factor = seg.d / 100; 
+                let max_possible_churn = 1.0 - lock_factor;
+                
+                let churn_rate = sat_factor * max_possible_churn;
+                churn_rate *= 0.15; 
+                
+                if (state.comp_locked) churn_rate += 0.10; 
+                churn_rate = Math.min(0.85, churn_rate); 
+                
+                let lost = Math.floor(seg.count * churn_rate);
+                seg.count = Math.max(0, seg.count - lost);
+                
+                if(price <= 15 && protocols.i_cld && seg.sat > 70 && !state.comp_locked) {
+                    seg.count += Math.floor(seg.count * 0.02); 
+                }
+
+                if(state.market_expansion && (seg.name === "Hobbyists" || seg.name === "Indie Pros")) {
+                    seg.count += Math.floor(seg.count * 0.03); 
+                }
+
+                total_users_lost += lost;
+                current_total_users += seg.count;
+                total_m_ext += seg.count * (base_yield * seg.v);
+            } catch(e) {
+                console.error("segment processing error:", e);
+            }
+        }
+
+        state.last_m_ext = total_m_ext; 
+        state.profit += total_m_ext; 
+        state.ext += total_m_ext;
+        
+        let gdp_drain = total_m_ext / GDP_DIVISOR;
+        let gdp_regen = 0;
+        if(protocols.e_uni) gdp_regen += 0.2;
+        if(protocols.e_trans) gdp_regen += 0.2;
+        if(price <= 20) gdp_regen += 0.3;
+        if(protocols.i_rd) gdp_regen += (0.3 * state.rd_efficiency);
+        
+        state.gdp = Math.min(100, Math.max(0, state.gdp - gdp_drain + gdp_regen));
+        
+        state.history.p.push(state.profit);
+        state.history.g.push(state.gdp);
+        
+        if(state.history.p.length > 50) {
+            state.history.p.shift();
+            state.history.g.shift();
+        }
+
+        if(current_total_users > 0) {
+            let t_sat = 0; 
+            let t_dep = 0;
+            for(let j=0; j<state.segments.length; j++) {
+                try {
+                    if(state.segments[j]) {
+                        t_sat += state.segments[j].sat * state.segments[j].count;
+                        t_dep += state.segments[j].d * state.segments[j].count;
+                    }
+                } catch(e) {
+                    console.error("aggregate calculation error:", e);
+                }
+            }
+            state.global_sat = t_sat / current_total_users;
+            state.global_dep = t_dep / current_total_users;
+        } else {
+            state.global_sat = 100;
+            state.global_dep = 0;
+        }
+
+        let pol_drain = ((100 - state.global_sat) * 0.05); 
+        if (protocols.hr_nca) pol_drain += 3; 
+        state.pol = Math.min(100, Math.max(0, state.pol - pol_drain + pol_boost));
+
+        operating_margin = total_m_ext - expenses; 
+        let missed_by = state.target_margin - operating_margin;
+        let base_patience_change = 0;
+
+        if (operating_margin < state.target_margin) {
+            let miss_severity = Math.min(15, (missed_by / state.target_margin) * 20); 
+            base_patience_change = -Math.max(3, miss_severity); 
+        } else {
+            let over_pct = (operating_margin - state.target_margin) / state.target_margin;
+            base_patience_change = Math.min(15, 3 + (over_pct * 20)); 
+        }
+        
+        state.board_patience = Math.min(100, state.board_patience + base_patience_change - ethical_burn);
+
+        let structural_growth = state.target_margin * 1.02; 
+        let performance_ratchet = operating_margin * 1.01; 
+        state.target_margin = Math.max(structural_growth, performance_ratchet);
+
+        for(let i=0; i<state.memos_deck.length; i++) {
+            try {
+                let memo = state.memos_deck[i];
+                if(memo && !memo.triggered) {
+                    // Check condition safely
+                    let condition_result = false;
+                    try {
+                        condition_result = memo.condition(protocols, price);
+                    } catch(e) {
+                        console.error("memo condition error:", e);
+                    }
+                    
+                    if(condition_result) {
+                        memo.triggered = true;
+                        trigger_interactive_memo(memo);
+                    }
+                }
+            } catch(e) {
+                console.error("memo deck processing error:", e);
+            }
+        }
+        
+        generate_news();
+        update_ui();
+        
+        if(state.comp_locked && total_users_lost > 0) {
+            log("Month " + state.month + ": DEFECTION - " + total_users_lost + " users migrated.");
+        } else {
+            log("Month " + state.month + ": Rev: $" + Math.round(total_m_ext).toLocaleString() + " | Margin: $" + Math.round(operating_margin).toLocaleString());
+        }
+        
+        if(state.board_patience <= 0) {
+            end("TERMINATED BY BOARD", "You failed your fiduciary duty.", "You missed consecutive growth targets or failed to offset ethical protocols with massive user volume. The Board has fired you. In a monopolistic structure, static survival is treated as failure.");
+            return;
+        } else if(state.profit < 0) {
+            end("BANKRUPTCY", "Cander Creative has run out of capital.", "You operated the infrastructure at a loss without properly scaling extraction to cover your retainer deficits.");
+            return;
+        } else if(state.gdp <= 20) {
+            end("HOST COLLAPSE", "The host macro-economy can no longer sustain your extraction velocity.", "You successfully maximized extraction, but failed to account for host viability. You destroyed the purchasing power required to sustain your own revenue. This mirrors aggressive monopolistic rent-seeking that hollows out local economies.");
+            return;
+        } else if(current_total_users < 501) {
+            end("MARKET REJECTION", "The commercial studios migrated to alternatives.", "You attempted to harvest before the cage was locked, or you failed to out-innovate the competition while operating an open ecosystem. Without dependency, you were destroyed by the free market.");
+            return;
+        } else if(state.pol <= 10) {
+            end("ANTITRUST INTERVENTION", "The DOJ dissolved Cander Creative.", "You generated massive public outrage without purchasing the necessary regulatory capture. Without a sufficient lobbying moat, the state acted on the outrage. This mirrors the reality of modern antitrust enforcement.");
+            return;
+        }
+        
+        state.month++;
+    } catch(e) {
+        console.error("next_tick error:", e);
+    }
+}
+
+function update_ui() {
+    try {
+        let total_users = 0;
+        for(let i=0; i<state.segments.length; i++) {
+            if(state.segments[i]) {
+                total_users += state.segments[i].count;
+            }
+        }
+        
+        const els = {
+            p_disp: document.getElementById('p_disp'),
+            g_disp: document.getElementById('g_disp'), // Now exists in HTML
+            u_disp: document.getElementById('u_disp'),
+            q_disp: document.getElementById('q_disp'),
+            g_bar: document.getElementById('g_bar'),
+            rd_txt: document.getElementById('rd_txt'),
+            rd_bar: document.getElementById('rd_bar'),
+            dep_txt: document.getElementById('dep_txt'),
+            dep_bar: document.getElementById('dep_bar'),
+            sat_txt: document.getElementById('sat_txt'),
+            sat_bar: document.getElementById('sat_bar'),
+            pol_txt: document.getElementById('pol_txt'),
+            pol_bar: document.getElementById('pol_bar'),
+            morale_txt: document.getElementById('morale_txt'),
+            morale_bar: document.getElementById('morale_bar'),
+            board_txt: document.getElementById('board_txt'),
+            board_bar: document.getElementById('board_bar'),
+            s_ext: document.getElementById('s_ext'),
+            s_lob: document.getElementById('s_lob'),
+            s_eng: document.getElementById('s_eng'),
+            s_target: document.getElementById('s_target'),
+            alert_board: document.getElementById('alert_board'),
+            alert_state: document.getElementById('alert_state'),
+            alert_boom: document.getElementById('alert_boom'),
+            btn_acq: document.getElementById('btn_acquire'),
+            threat_bar: document.getElementById('threat_bar'),
+            threat_txt: document.getElementById('threat_txt'),
+            btn_inbox: document.getElementById('btn_inbox'),
+            table: document.getElementById('user_table')
+        };
+
+        if (els.p_disp) els.p_disp.innerText = "$"+Math.round(state.profit).toLocaleString();
+        if (els.g_disp && state.gdp !== undefined) els.g_disp.innerText = state.gdp.toFixed(1)+"%";
+        if (els.u_disp) els.u_disp.innerText = total_users.toLocaleString();
+        if (els.q_disp) els.q_disp.innerText = state.month;
+        if (els.g_bar) els.g_bar.style.width = state.gdp+"%";
+        
+        let rd_pct = Math.round(state.rd_efficiency * 100);
+        if (els.rd_txt) els.rd_txt.innerText = rd_pct + "%";
+        if (els.rd_bar) {
+            els.rd_bar.style.width = rd_pct + "%";
+            els.rd_bar.style.background = rd_pct < 40 ? "#ff0000" : "#00ffff";
+        }
+
+        if (els.dep_txt) els.dep_txt.innerText = Math.round(state.global_dep) + "%";
+        if (els.dep_bar) els.dep_bar.style.width = Math.min(100, state.global_dep) + "%";
+        
+        if (els.sat_txt) els.sat_txt.innerText = Math.round(state.global_sat) + "%";
+        if (els.sat_bar) {
+            els.sat_bar.style.width = Math.min(100, state.global_sat) + "%";
+            els.sat_bar.style.background = state.global_sat > 50 ? "#00ff00" : "#ff0000";
+        }
+
+        if (els.pol_txt) els.pol_txt.innerText = Math.round(state.pol) + "%";
+        if (els.pol_bar) els.pol_bar.style.width = Math.min(100, state.pol) + "%";
+        
+        if (els.morale_txt) els.morale_txt.innerText = Math.round(state.eng_morale) + "%";
+        if (els.morale_bar) {
+            els.morale_bar.style.width = Math.min(100, state.eng_morale) + "%";
+            els.morale_bar.style.background = state.eng_morale < 25 ? "#ff0000" : "#9370db";
+        }
+
+        if (els.board_txt) els.board_txt.innerText = Math.round(state.board_patience) + "%";
+        if (els.board_bar) {
+            els.board_bar.style.width = Math.min(100, state.board_patience) + "%";
+            els.board_bar.style.background = state.board_patience < 40 ? "#ff0000" : "#00ff00";
+        }
+
+        if (els.s_ext) els.s_ext.innerText = Math.round(state.ext).toLocaleString();
+        if (els.s_lob) els.s_lob.innerText = state.lob.toLocaleString();
+        if (els.s_eng) els.s_eng.innerText = state.eng_count.toLocaleString();
+        if (els.s_target) els.s_target.innerText = Math.round(state.target_margin).toLocaleString();
+        
+        if(els.alert_board) els.alert_board.style.display = state.board_patience < 30 ? 'block' : 'none';
+        if(els.alert_state) els.alert_state.style.display = (state.pol < 25 && state.global_sat < 40) ? 'block' : 'none';
+        if(els.alert_boom) els.alert_boom.style.display = state.market_expansion ? 'block' : 'none';
+        
+        let acq_cost = Math.floor(state.comp_threat * 15000);
+        if (els.btn_acq && els.threat_bar) {
+            if (state.comp_locked) {
+                els.btn_acq.innerText = "ACQUISITION REJECTED"; 
+                els.btn_acq.disabled = true;
+                els.threat_bar.style.background = "#ff0000";
+            } else {
+                els.btn_acq.innerText = "ACQUIRE THREAT ($" + acq_cost.toLocaleString() + ")";
+                els.btn_acq.disabled = state.profit < acq_cost || state.over;
+                els.threat_bar.style.background = "#ff8c00";
+            }
+        }
+        
+        if (els.threat_txt) els.threat_txt.innerText = Math.round(state.comp_threat) + "%";
+        if (els.threat_bar) els.threat_bar.style.width = Math.min(100, state.comp_threat) + "%";
+
+        if (els.btn_inbox) {
+            els.btn_inbox.innerText = "OPEN INBOX (" + state.unread + " Unread)";
+            els.btn_inbox.style.background = state.unread > 0 ? '#ffb6c1' : '#dfdfdf';
+        }
+        
+        let tableHTML = "";
+        for(let i=0; i<state.segments.length; i++) {
+            try {
+                if(!state.segments[i]) continue;
+                
+                let seg = state.segments[i];
+                let s_color = seg.sat < 35 ? '#f00' : (seg.sat < 65 ? '#900' : '#000');
+                let d_color = seg.d > 60 ? '#4a90e2' : '#000';
+                tableHTML += '<tr><td style="font-weight:bold;">' + (seg.name || "") + '</td><td>' + seg.count.toLocaleString() + '</td><td style="color:' + s_color + '">' + Math.round(seg.sat) + '%</td><td style="color:' + d_color + '">' + Math.round(seg.d) + '%</td></tr>';
+            } catch(e) {
+                console.error("table row error:", e);
+            }
+        }
+        if (els.table) els.table.innerHTML = tableHTML;
+        render_graph();
+    } catch(e) {
+        console.error("update_ui error:", e);
+    }
+}
+
+function render_graph() {
+    const c = document.getElementById('perf_canvas'); 
+    if (!c || !c.getContext) return;
+    
+    try {
+        const ctx = c.getContext('2d');
+        ctx.fillStyle="#000"; ctx.fillRect(0,0,c.width,c.height);
+        const max_points = 40;
+        const data_p = state.history.p ? state.history.p.slice(-max_points) : [500000];
+        const data_g = state.history.g ? state.history.g.slice(-max_points) : [100];
+        const num_points = Math.max(1, data_p.length - 1);
+        const step = c.width / num_points; 
+        let max_p = 1000000;
+        
+        for(let i=0; i<data_p.length; i++) { 
+            if(data_p[i] > max_p) max_p = data_p[i]; 
+        }
+
+        ctx.strokeStyle="#0f0"; ctx.lineWidth=2; ctx.beginPath();
+        for(let i=0; i<data_p.length; i++) { 
+            let x = i * step; 
+            let y = c.height - (data_p[i]/max_p * (c.height-10)); 
+            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); 
+        }
+        ctx.stroke();
+        
+        ctx.strokeStyle="#f00"; ctx.lineWidth=2; ctx.beginPath();
+        for(let i=0; i<data_g.length; i++) { 
+            let x = i * step; 
+            let y = c.height - (data_g[i]/100 * (c.height-10)); 
+            if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); 
+        }
+        ctx.stroke();
+        
+        ctx.fillStyle="#fff"; ctx.font="9px Tahoma";
+        ctx.fillText("Profit", 5, 12); ctx.fillText("GDP", 5, 24);
+    } catch(e) {
+        console.error("render_graph error:", e);
+    }
+}
+
+function log(m) { 
+    try {
+        const l = document.getElementById('event_log'); 
+        if (!l) return;
+        
+        let newDiv = document.createElement('div');
+        newDiv.innerText = "> " + m;
+        l.insertBefore(newDiv, l.firstChild);
+        if (l.childElementCount > 50) l.removeChild(l.lastChild);
+    } catch(e) {
+        console.error("log error:", e);
+    }
+}
+
+function end(t, m, debrief) { 
+    try {
+        state.over = true; 
+        set_speed(0); 
+        
+        let checks = document.querySelectorAll('input[type="checkbox"]');
+        for(let i=0; i<checks.length; i++) { 
+            if(checks[i]) checks[i].disabled = true; 
+        }
+        
+        let p_slider = document.getElementById('price_slider');
+        if(p_slider) p_slider.disabled = true;
+        
+        save_high_score();
+        update_ui(); 
+        
+        const els = {
+            u_disp: document.getElementById('u_disp'),
+            s_eng: document.getElementById('s_eng'),
+            go_title: document.getElementById('go_title'),
+            go_body: document.getElementById('go_body'),
+            modal: document.getElementById('game_over_modal')
+        };
+        
+        let f_users = els.u_disp ? els.u_disp.innerText : "N/A";
+        let f_eng = els.s_eng ? els.s_eng.innerText : "N/A";
+        
+        let stats_html = "<div style='display:flex; justify-content:space-between; margin-bottom:10px;'>";
+        stats_html += "<div><strong>Final Profit:</strong> $" + Math.round(state.profit).toLocaleString() + "<br>";
+        stats_html += "<strong>Total Extracted:</strong> $" + Math.round(state.ext).toLocaleString() + "</div>";
+        stats_html += "<div><strong>Final Users:</strong> " + f_users + "<br>";
+        stats_html += "<strong>Final Headcount:</strong> " + f_eng + "</div></div>";
+        
+        let debrief_html = "<div class='debrief-box'><strong>POST-MORTEM ANALYSIS:</strong><br><br>" + (debrief || "") + "</div>";
+        
+        if (els.go_title) els.go_title.innerText = t;
+        if (els.go_body) els.go_body.innerHTML = "<div style='font-size:15px; margin-bottom: 12px; font-weight:bold;'>" + (m || "") + "</div>" + stats_html + debrief_html;
+        if (els.modal) els.modal.style.display = 'flex';
+    } catch(e) {
+        console.error("end error:", e);
+    }
+}
+
+function reset_game() { 
+    try {
+        location.reload(); 
+    } catch(e) {
+        console.error("reset_game error:", e);
+    }
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
